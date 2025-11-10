@@ -51,3 +51,4 @@ exports.deleteSavedWord = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// chỉnh tìm saved word theo user id từ req.user.id
