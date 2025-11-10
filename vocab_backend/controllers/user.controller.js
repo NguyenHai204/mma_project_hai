@@ -41,3 +41,53 @@ exports.login = async (req, res) => {
 };
 //change end
 //controller user register login su dung jwwt
+//moi
+// ================== USER CONTROLLER (JWT Protected APIs) ==================
+
+exports.getProfile = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1]; // format: Bearer token
+    if (!token) return res.status(401).json({ message: "Token missing" });
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || process.env.JWT_KEY || "secretkey"
+    );
+
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+exports.updateUser = async (req, res) => {
+  try {
+    const updates = { name: req.body.name, role: req.body.role };
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      updates,
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const deleted = await User.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "User not found" });
+
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

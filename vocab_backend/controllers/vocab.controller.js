@@ -48,4 +48,18 @@ exports.deleteVocab = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-//crud vocab
+//crud vocab//new
+exports.getVocabByLevel = async (req, res) => {
+  try {
+    const { level } = req.params;
+    const vocabs = await Vocabulary.find({ level });
+
+    if (!vocabs.length) {
+      return res.status(404).json({ message: "Không tìm thấy từ vựng theo level" });
+    }
+
+    res.json(vocabs);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
