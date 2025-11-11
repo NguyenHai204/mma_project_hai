@@ -8,42 +8,40 @@ const getAdminStats = async (req, res) => {
     const totalVocab = await Vocab.countDocuments();
 
     const now = new Date();
-const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const currentMonth = now.getMonth() + 1; // tháng hiện tại (1 - 12)
+    const currentYear = now.getFullYear();
 
-const userStatsRaw = await User.aggregate([
-  {
-    $match: {
-      createdAt: {
-        $gte: currentMonthStart,
-        $lte: currentMonthEnd,
+    const currentMonthStart = new Date(currentYear, now.getMonth(), 1);
+    const currentMonthEnd = new Date(currentYear, now.getMonth() + 1, 0);
+
+    const userStatsRaw = await User.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: currentMonthStart,
+            $lte: currentMonthEnd,
+          },
+        },
       },
-    },
-  },
-  {
-    $group: {
-      _id: {
-        day: { $dayOfMonth: '$createdAt' },
-        month: { $month: '$createdAt' },
+      {
+        $group: {
+          _id: { day: { $dayOfMonth: "$createdAt" } },
+          count: { $sum: 1 },
+        },
       },
-      count: { $sum: 1 },
-    },
-  },
-  {
-    $sort: { '_id.day': 1 },
-  },
-]);
+      { $sort: { "_id.day": 1 } },
+    ]);
 
-// Format lại thành chuỗi ngày/tháng: "20/7"
-const userStats = userStatsRaw.map(item => ({
-  day: `${item._id.day}/${item._id.month}`,
-  count: item.count,
-}));
-
+    // ✅ Format trả về: { day: 12, count: 4 }
+    const userStats = userStatsRaw.map((item) => ({
+      day: item._id.day,
+      count: item.count,
+    }));
 
     res.json({
       totalCategories,
       totalVocab,
+      currentMonth, // gửi thêm tháng để frontend tự format "dd/mm"
       userStats,
     });
   } catch (err) {
@@ -53,4 +51,3 @@ const userStats = userStatsRaw.map(item => ({
 };
 
 module.exports = { getAdminStats };
-// đã sửa logic thống kê user theo ngày trong tháng
