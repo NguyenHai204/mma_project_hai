@@ -1,39 +1,49 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import axios from '../api/axiosClient';
-import { AuthContext } from '../context/AuthContext';
-import { BarChart } from 'react-native-chart-kit';
-import { useIsFocused } from '@react-navigation/native';
+import React, { useEffect, useState, useContext, useCallback } from "react";
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+} from "react-native";
+import axios from "../api/axiosClient";
+import { AuthContext } from "../context/AuthContext";
+import { BarChart } from "react-native-chart-kit";
+import { useIsFocused } from "@react-navigation/native";
 
-const screenWidth = Dimensions.get('window').width;
+const screenWidth = Dimensions.get("window").width;
 
 export default function AdminDashboardScreen() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { token } = useContext(AuthContext);
+  const { token, logout } = useContext(AuthContext);
   const isFocused = useIsFocused();
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/api/admin/stats', {
+      const res = await axios.get("/api/admin/stats", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       setStats(res.data);
     } catch (err) {
-      console.error('Lỗi lấy thống kê:', err);
+      console.error("Lỗi lấy thống kê:", err);
+
+      // 👉 Nếu token hết hạn → logout người dùng
+      if (err.response?.status === 401) {
+        logout();
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, logout]);
 
   useEffect(() => {
-    if (isFocused) {
-      fetchStats();
-    }
-  }, [isFocused]);
+    if (isFocused) fetchStats();
+  }, [isFocused, fetchStats]);
 
   if (loading) {
     return (
@@ -52,28 +62,37 @@ export default function AdminDashboardScreen() {
     );
   }
 
-  // Chỉ lấy các ngày có người đăng ký
- const filteredStats = stats.userStats.filter(item => item.count > 0); // dùng trực tiếp item.day
-
+  // ✅ safe filter (tránh crash khi userStats undefined)
+  const filteredStats = stats?.userStats?.filter((item) => item.count > 0) || [];
 
   const chartData = {
-    labels: filteredStats.map(item => `${item.day}`),
-    datasets: [
-      {
-        data: filteredStats.map(item => item.count),
-      },
-    ],
+    labels: filteredStats.map((item) => `${item.day}/${stats.currentMonth}`),
+    datasets: [{ data: filteredStats.map((item) => item.count) }],
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>📊 Thống kê</Text>
-      <Text style={styles.stat}> Tổng số category: {stats.totalCategories}</Text>
-      <Text style={styles.stat}> Tổng số từ vựng: {stats.totalVocab}</Text>
+
+      {/* Summary Stats Cards */}
+      <View style={styles.cardContainer}>
+        <View style={styles.card}>
+          <Text style={styles.cardValue}>{stats.totalCategories}</Text>
+          <Text style={styles.cardLabel}>Category</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardValue}>{stats.totalVocab}</Text>
+          <Text style={styles.cardLabel}>Từ vựng</Text>
+        </View>
+      </View>
 
       {filteredStats.length > 0 ? (
         <>
-          <Text style={[styles.title, { marginTop: 20 }]}>👥 Số người đăng kí trong tháng</Text>
+          <Text style={[styles.title, { marginTop: 20 }]}>
+            👥 Người dùng đăng ký theo ngày
+          </Text>
+
           <BarChart
             data={chartData}
             width={screenWidth - 40}
@@ -81,9 +100,9 @@ export default function AdminDashboardScreen() {
             fromZero
             showValuesOnTopOfBars
             chartConfig={{
-              backgroundColor: '#f0f0f0',
-              backgroundGradientFrom: '#fff',
-              backgroundGradientTo: '#fff',
+              backgroundColor: "#ffffff",
+              backgroundGradientFrom: "#ffffff",
+              backgroundGradientTo: "#ffffff",
               decimalPlaces: 0,
               color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
               labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
@@ -91,14 +110,14 @@ export default function AdminDashboardScreen() {
                 borderRadius: 8,
               },
               propsForBackgroundLines: {
-                strokeDasharray: '', // solid lines
+                strokeDasharray: "",
               },
             }}
             style={{ marginTop: 10, borderRadius: 8 }}
           />
         </>
       ) : (
-        <Text style={{ marginTop: 20, color: 'gray' }}>
+        <Text style={{ marginTop: 20, color: "gray" }}>
           Không có dữ liệu người dùng theo ngày trong tháng.
         </Text>
       )}
@@ -108,7 +127,42 @@ export default function AdminDashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 20 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  stat: { fontSize: 20, marginVertical: 4 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
+  // ✅ New UI card
+  cardContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  card: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  cardValue: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#007AFF",
+  },
+  cardLabel: {
+    fontSize: 16,
+    color: "#555",
+    marginTop: 4,
+  },
 });

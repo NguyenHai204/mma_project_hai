@@ -9,11 +9,12 @@ import {
   Modal,
   TextInput,
   Platform,
+  StyleSheet,
 } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import axios from "../api/axiosClient";
-import { globalStyles, AntdTheme } from "../../styles/antdStyles";
+import { globalStyles } from "../../styles/antdStyles";
 
 export function CategoryListScreen({ navigation }) {
   const { token } = useContext(AuthContext);
@@ -23,40 +24,34 @@ export function CategoryListScreen({ navigation }) {
   const isFocused = useIsFocused();
 
   useEffect(() => {
-    if (isFocused) fetchCategories();
+    if (isFocused) loadCategories();
   }, [isFocused]);
 
-  // 🧩 Fetch categories
-  const fetchCategories = async () => {
+  const loadCategories = async () => {
     try {
       const res = await axios.get("/api/categories");
       setCategories(res.data);
     } catch (err) {
-      console.error(err);
       Alert.alert("Lỗi", "Không thể tải danh sách category");
     }
   };
 
-  // 🗑️ Delete category
-  const handleDeleteCategory = async (categoryId) => {
-    Alert.alert("Xác nhận", "Bạn có chắc chắn muốn xóa category này không?", [
+  const deleteCategory = (categoryId) => {
+    Alert.alert("Xác nhận", "Bạn chắc muốn xóa category này?", [
       { text: "Hủy", style: "cancel" },
       {
         text: "Xóa",
         style: "destructive",
         onPress: async () => {
           try {
-            const res = await axios.delete(`/api/categories/${categoryId}`, {
+            await axios.delete(`/api/categories/${categoryId}`, {
               headers: { Authorization: `Bearer ${token}` },
             });
-            if (res.status === 200) {
-              setCategories((prev) =>
-                prev.filter((category) => category._id !== categoryId)
-              );
-              Alert.alert("Thành công", "Đã xóa category!");
-            }
+
+            setCategories((prev) => prev.filter((c) => c._id !== categoryId));
+            Alert.alert("Thành công", "Đã xóa category");
+
           } catch (err) {
-            console.error("Delete error:", err.response?.data || err.message);
             Alert.alert("Lỗi", err.response?.data?.message || "Không thể xóa");
           }
         },
@@ -64,50 +59,39 @@ export function CategoryListScreen({ navigation }) {
     ]);
   };
 
-  // ✏️ Update category
-  const handleUpdateCategory = async () => {
-    const { _id, name, backgroundImage } = editingCategory;
-    if (!name.trim()) {
-      Alert.alert("Lỗi", "Tên không được để trống");
-      return;
+  const updateCategory = async () => {
+    if (!editingCategory.name.trim()) {
+      return Alert.alert("Lỗi", "Tên không được để trống");
     }
 
     try {
       await axios.put(
-        `/api/categories/${_id}`,
-        { name, backgroundImage },
+        `/api/categories/${editingCategory._id}`,
+        {
+          name: editingCategory.name,
+          backgroundImage: editingCategory.backgroundImage,
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setModalVisible(false);
       setEditingCategory(null);
-      fetchCategories();
+      loadCategories();
+
     } catch (err) {
-      console.error(err);
-      Alert.alert("Lỗi", err.response?.data?.message || "Không cập nhật được");
+      Alert.alert("Lỗi", err.response?.data?.message || "Cập nhật thất bại");
     }
   };
 
-  // 🎴 Render card
+  const openEditModal = (category) => {
+    setEditingCategory({ ...category });
+    setModalVisible(true);
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
+      style={styles.card}
       activeOpacity={0.9}
-      style={{
-        width: "15.5%", // ✅ cố định để đủ 6 cột
-        aspectRatio: 1, // ✅ card vuông, tự co theo màn hình
-        margin: 6,
-        borderRadius: 12,
-        backgroundColor: "#fff",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 3,
-        alignItems: "center",
-        justifyContent: "space-between",
-        overflow: "hidden",
-        transform: [{ scale: Platform.OS === "web" ? 1 : 1 }],
-        transition: Platform.OS === "web" ? "transform 0.2s ease-in-out" : undefined,
-      }}
       onPress={() =>
         navigation.navigate("AdminWordScreen", {
           categoryId: item._id,
@@ -117,51 +101,21 @@ export function CategoryListScreen({ navigation }) {
     >
       <ImageBackground
         source={{ uri: item.backgroundImage }}
-        style={{
-          width: "100%",
-          height: "70%",
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "#f0f0f0",
-        }}
-        imageStyle={{
-          resizeMode: "cover",
-        }}
+        style={styles.cardImage}
+        imageStyle={styles.cardImageStyle}
       />
 
-      <View
-        style={{
-          width: "100%",
-          paddingVertical: 6,
-          backgroundColor: "#fff",
-          alignItems: "center",
-          borderTopWidth: 1,
-          borderColor: "#f0f0f0",
-        }}
-      >
-        <Text
-          numberOfLines={1}
-          style={{
-            color: "#001529",
-            fontSize: 14,
-            fontWeight: "600",
-            textAlign: "center",
-          }}
-        >
+      <View style={styles.cardFooter}>
+        <Text numberOfLines={1} style={styles.cardTitle}>
           {item.name}
         </Text>
-        <View style={{ flexDirection: "row", marginTop: 4 }}>
-          <TouchableOpacity
-            onPress={() => {
-              setEditingCategory({ ...item });
-              setModalVisible(true);
-            }}
-            style={{ marginHorizontal: 6 }}
-          >
-            <Text style={{ fontSize: 16, color: "#1890ff" }}>✏️</Text>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity onPress={() => openEditModal(item)}>
+            <Text style={styles.editIcon}>✏️</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleDeleteCategory(item._id)}>
-            <Text style={{ fontSize: 16, color: "#ff4d4f" }}>🗑️</Text>
+          <TouchableOpacity onPress={() => deleteCategory(item._id)}>
+            <Text style={styles.deleteIcon}>🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -176,35 +130,35 @@ export function CategoryListScreen({ navigation }) {
         data={categories}
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
-        numColumns={6} // ✅ 6 card mỗi hàng
+        numColumns={6}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: 100,
-          justifyContent: "center",
-        }}
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      {/* 🪟 Modal cập nhật */}
+      {/* Modal edit category */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={globalStyles.modalBackground}>
           <View style={globalStyles.modalContainer}>
             <Text style={globalStyles.modalTitle}>Cập nhật Category</Text>
 
-            <Text style={globalStyles.modalLabel}>Tên mới:</Text>
             <TextInput
+              placeholder="Tên category"
               style={globalStyles.input}
-              value={editingCategory?.name || ""}
+              value={editingCategory?.name}
               onChangeText={(text) =>
                 setEditingCategory({ ...editingCategory, name: text })
               }
             />
 
-            <Text style={globalStyles.modalLabel}>Background Image URL:</Text>
             <TextInput
+              placeholder="Link background"
               style={globalStyles.input}
-              value={editingCategory?.backgroundImage || ""}
+              value={editingCategory?.backgroundImage}
               onChangeText={(text) =>
-                setEditingCategory({ ...editingCategory, backgroundImage: text })
+                setEditingCategory({
+                  ...editingCategory,
+                  backgroundImage: text,
+                })
               }
             />
 
@@ -213,16 +167,19 @@ export function CategoryListScreen({ navigation }) {
                 style={[globalStyles.modalButton, globalStyles.modalButtonCancel]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={{ color: "#000", fontWeight: "600" }}>Hủy</Text>
+                <Text>Hủy</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[globalStyles.modalButton, globalStyles.modalButtonSave]}
-                onPress={handleUpdateCategory}
+                onPress={updateCategory}
               >
-                <Text style={globalStyles.modalButtonText}>Lưu</Text>
+                <Text style={{ color: "#fff", fontWeight: "600" }}>
+                  Lưu
+                </Text>
               </TouchableOpacity>
             </View>
+
           </View>
         </View>
       </Modal>
@@ -232,13 +189,59 @@ export function CategoryListScreen({ navigation }) {
 
 export function LogoutScreen() {
   const { logout } = useContext(AuthContext);
+
   useEffect(() => {
     logout();
   }, []);
+
   return (
     <View style={globalStyles.logoutContainer}>
       <Text style={globalStyles.logoutText}>Đang đăng xuất...</Text>
     </View>
   );
 }
-//
+
+const styles = StyleSheet.create({
+  card: {
+    width: "15.5%",
+    aspectRatio: 1,
+    margin: 6,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    elevation: 3,
+    shadowOpacity: 0.15,
+    overflow: "hidden",
+  },
+  cardImage: {
+    width: "100%",
+    height: "70%",
+    backgroundColor: "#e8e8e8",
+  },
+  cardImageStyle: {
+    resizeMode: "cover",
+  },
+  cardFooter: {
+    paddingVertical: 6,
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderColor: "#f0f0f0",
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#001529",
+  },
+  cardActions: {
+    flexDirection: "row",
+    marginTop: 4,
+  },
+  editIcon: {
+    marginHorizontal: 6,
+    fontSize: 16,
+    color: "#1890ff",
+  },
+  deleteIcon: {
+    fontSize: 16,
+    color: "#ff4d4f",
+  },
+});

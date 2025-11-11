@@ -1,119 +1,137 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext } from "react";
 import {
+  SafeAreaView,
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Alert,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
-} from 'react-native';
-import axios from '../api/axiosClient';
-import { AuthContext } from '../context/AuthContext';
+} from "react-native";
+import axios from "../api/axiosClient";
+import { AuthContext } from "../context/AuthContext";
 
 export default function AddCategoryScreen({ navigation }) {
   const { token } = useContext(AuthContext);
-  const [name, setName] = useState('');
-  const [backgroundImage, setBackgroundImage] = useState('');
 
-  const handleAdd = async () => {
+  const [form, setForm] = useState({
+    name: "",
+    backgroundImage: "",
+  });
+
+  const handleChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    const { name, backgroundImage } = form;
+
     if (!name.trim() || !backgroundImage.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ tên và ảnh nền');
-      return;
+      return Alert.alert("Thiếu dữ liệu", "Vui lòng điền đầy đủ thông tin.");
     }
 
     try {
       await axios.post(
-        '/api/categories',
-        { name, backgroundImage },
-        { headers: { Authorization: `Bearer ${token}` } }
+        "/api/categories",
+        form,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-      Alert.alert('Thành công', 'Đã thêm category');
-      setName('');
-      setBackgroundImage('');
+
+      Alert.alert("✅ Thành công", "Category đã được tạo");
+      setForm({ name: "", backgroundImage: "" });
       navigation.goBack();
+
     } catch (err) {
-      Alert.alert('Lỗi', err.response?.data?.message || 'Không thêm được category');
+      Alert.alert("❌ Lỗi", err.response?.data?.message || "Không thể tạo Category");
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.title}>Thêm Category Mới</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.wrapper}>
+        <Text style={styles.heading}>Tạo Category mới</Text>
 
-        <TextInput
-          placeholder="Tên category"
-          value={name}
-          onChangeText={setName}
-          style={styles.input}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Tên Category</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập tên category"
+            value={form.name}
+            onChangeText={(text) => handleChange("name", text)}
+          />
+        </View>
 
-        <TextInput
-          placeholder="Link ảnh nền (background)"
-          value={backgroundImage}
-          onChangeText={setBackgroundImage}
-          style={styles.input}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Link ảnh nền</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập URL ảnh nền"
+            value={form.backgroundImage}
+            onChangeText={(text) => handleChange("backgroundImage", text)}
+          />
+        </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleAdd}>
-          <Text style={styles.buttonText}>Thêm Category</Text>
-        </TouchableOpacity>
+        <Pressable style={styles.button} onPress={handleSubmit}>
+          <Text style={styles.buttonText}>Lưu Category</Text>
+        </Pressable>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fc',
+  container: { flex: 1, backgroundColor: "#eef2f7" },
+
+  wrapper: {
+    paddingHorizontal: 18,
+    paddingTop: 30,
   },
-  inner: {
-    padding: 20,
-    paddingTop: 40, // 👈 Đẩy nội dung xuống chút
-  },
-  title: {
+
+  heading: {
     fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 25,
   },
+
+  inputGroup: {
+    marginBottom: 18,
+  },
+
+  label: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 6,
+    color: "#444",
+  },
+
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: "#ffffff",
     borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    borderColor: "#d6d7db",
+    fontSize: 16,
     elevation: 2,
   },
+
   button: {
-    backgroundColor: '#007bff',
-    paddingVertical: 14,
+    backgroundColor: "#0D6EFD",
+    paddingVertical: 15,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 5,
-    elevation: 3,
   },
+
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "bold",
   },
 });
