@@ -6,21 +6,21 @@ import {
   TouchableOpacity,
   ImageBackground,
   TextInput,
-  CheckBox
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Thêm thư viện icon
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import Checkbox from 'expo-checkbox'; // ✅ Thay đổi này
 
 import FormButton from '../components/FormButton';
 import ErrorText from '../components/ErrorText';
 import { AuthContext } from '../context/AuthContext';
 
-export default function LoginScreen({ navigation }) {
+function LoginScreen({ navigation }) {
   const { login } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // State để bật/tắt mật khẩu
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     try {
@@ -47,6 +47,8 @@ export default function LoginScreen({ navigation }) {
             value={email}
             onChangeText={setEmail}
             style={styles.input}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
         </View>
 
@@ -56,7 +58,7 @@ export default function LoginScreen({ navigation }) {
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry={!showPassword} // Toggle password visibility
+            secureTextEntry={!showPassword}
             style={styles.input}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
@@ -69,10 +71,11 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.checkboxContainer}>
-          <CheckBox
+          <Checkbox
             value={rememberMe}
             onValueChange={setRememberMe}
             style={styles.checkbox}
+            color={rememberMe ? '#4CAF50' : undefined}
           />
           <Text style={styles.rememberText}>Remember me</Text>
         </View>
@@ -100,10 +103,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   overlay: {
-    width: '30%', // Giảm chiều rộng của form xuống 60% màn hình
-    height: 'auto', // Kéo dài form theo chiều cao
-    padding: 40,  // Giảm padding trong form
-    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Form overlay với độ trong suốt nhẹ
+    width: '90%', // ✅ Thay đổi từ 30% thành 90% cho mobile
+    maxWidth: 400, // ✅ Giới hạn width trên web
+    height: 'auto',
+    padding: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 12,
     shadowColor: '#000',
     shadowOpacity: 0.3,
@@ -111,21 +115,22 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   title: {
-    fontSize: 30, // Giảm kích thước tiêu đề
+    fontSize: 30,
     fontWeight: '700',
-    marginBottom: 30, // Giảm khoảng cách dưới tiêu đề
+    marginBottom: 30,
     textAlign: 'center',
     color: '#333',
   },
   inputWrapper: {
-    marginBottom: 20,  // Giảm khoảng cách giữa các input
-    position: 'relative', // Để các biểu tượng nằm đúng vị trí
+    marginBottom: 20,
+    position: 'relative',
   },
   input: {
-    height: 50, // Tăng chiều cao của input
-    paddingLeft: 40, // Padding left để có chỗ cho biểu tượng
+    height: 50,
+    paddingLeft: 40,
+    paddingRight: 40, // ✅ Thêm padding phải cho icon mắt
     borderWidth: 1,
-    borderColor: '#4CAF50', // Màu viền xanh lá cây
+    borderColor: '#4CAF50',
     borderRadius: 8,
     backgroundColor: '#fafafa',
     fontSize: 16,
@@ -134,12 +139,12 @@ const styles = StyleSheet.create({
   icon: {
     position: 'absolute',
     left: 10,
-    top: 15, // Canh biểu tượng cho đúng vị trí
+    top: 15,
   },
   eyeIcon: {
     position: 'absolute',
     right: 10,
-    top: 15, // Canh biểu tượng mắt vào bên phải
+    top: 15,
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -161,7 +166,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginBottom: 20,
-    backgroundColor: '#4CAF50', // Màu nút xanh lá cây
+    backgroundColor: '#4CAF50',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 40,
@@ -171,7 +176,7 @@ const styles = StyleSheet.create({
   switchText: {
     marginTop: 15,
     textAlign: 'center',
-    color: '#4CAF50', // Màu xanh lá cây cho liên kết
+    color: '#4CAF50',
     fontSize: 16,
   },
   forgotPassword: {
@@ -181,3 +186,5 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 });
+
+export default LoginScreen;
